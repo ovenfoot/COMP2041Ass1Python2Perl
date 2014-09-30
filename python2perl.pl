@@ -5,13 +5,17 @@
 
 
 $varnames = '.(?!print|for|while)*';
-$operators = '\-=\*\+\&\!\|><:';
+
+$operators = '\-=\*\+\&\!\|><:/%';
 %pythonKeywords = createKeywordHash();
 #$varnames = 'answer';
 
-@partParsedLines = parseLine(<>);
+while (my $input = <>)
+{
+	$parsedLine = parseLine($input);
+	print $parsedLine;
+}
 #@partParsedLines = tokenSplit(@partParsedLines);
-print "@partParsedLines\n";
 #print "\n------------\n\n";
 
 
@@ -21,75 +25,78 @@ print "@partParsedLines\n";
 
 sub parseLine
 {
-	my @lines = @_;
-	my @returnLines = ();
-	foreach my $line (@lines)
+	my ($line) = @_;
+
+	#remove leading white space
+	$line =~s/^\s.//g;
+	#remove white space from variable names
+	$line =~ s/\s*([$operators])\s*/$1/g;
+	$line =~ s/\n//g;
+
+	if ($line =~ /^#!/)
 	{
-		#remove leading white space
-		$line =~s/^\s.//g;
-		#remove white space from variable names
-		$line =~ s/\s*([$operators])\s*/$1/g;
-		$line =~ s/\n//g;
+		#firstline
+		$line = "#!/usr/bin/perl -w";
+	}
+	
+	elsif ($line =~ /^\s*#/ || $line =~ /^\s*$/) 
+	{
+		# Blank & comment lines can be passed unchanged
+		$line = $line;
+	}
+	elsif ($line =~ /^(\w)+=.*/)
+	{
+		#found expression, parse
+		#print "#expression is $line\n";
+		$line = parseExpression($line).";\n";
+	}
+	elsif ($line =~ /^print\s*"(.*)"\s*$/) 
+	{
+	
+		#generic string matching
+		$line = "print \"$1\\n\";\n";
+	}
+	
+	elsif ($line =~ /^print\s+(.+);(.+)/)
+	{
+		#inline printing and continue FIXME
+		$expression1 = parseExpression($1);
+		$expression2 = parseExpression($2);
 
-		if ($line =~ /^#!/)
-		{
-			#firstline
-			$line = "#!/usr/bin/perl -w";
-		}
-		
-		elsif ($line =~ /^\s*#/ || $line =~ /^\s*$/) 
-		{
-			# Blank & comment lines can be passed unchanged
-			$line = $line;
-		}
-		elsif ($line =~ /^(\w)+=.*/)
-		{
-			#found expression, parse
-			#print "#expression is $line\n";
-			$line = parseExpression($line).";\n";
-		}
-		elsif ($line =~ /print\s*"(.*)"\s*$/) 
-		{
-		
-			#generic string matching
-			$line = "print \"$1\\n\";\n";
-		}
-		
-		elsif ($line =~ /print\s+(.+)/)
-		{
-			#inline printing
-			$expression = parseExpression($1);
-
-			#print "$variables\n";
-			#$expression =~ s/([$operators])([a-zA-Z]\w+)/$1\$$2/g;
-			$line = 'print '.$expression.','.'"\n"'.';';		
-		}
-		elsif ($line =~ /(if|while)\s+(.*):(.*)/)
-		{
-			$condition = parseExpression($2);
-			printf "#condition is $condition\n";
-			$expression = parseExpression($3);
-			printf "#expression is $expression\n";
-
-			$line = "$1 ($condition) \n { \n\t$expression \n }\n";
-
-		}
-		else
-		{
-			$line = '#'.$line;
-		}
-
-
-
-
-		$line = $line."\n"; 
-		push @returnLines, $line;
-
-
-		
+		#print "#expression1 is $expression1 from $1 \n";
+		#$expression =~ s/([$operators])([a-zA-Z]\w+)/$1\$$2/g;
+		$line = 'print '.$expression1.','.'"\n"'.';'.$expression2."\n";		
 	}
 
-	return @returnLines;
+	elsif ($line =~ /^print\s+(.+)/)
+	{
+		#inline printing
+		$expression = parseExpression($1);
+
+		#print "$variables\n";
+		#$expression =~ s/([$operators])([a-zA-Z]\w+)/$1\$$2/g;
+		$line = 'print '."$expression".','.'"\n"'.';';		
+	}
+	elsif ($line =~ /^(if|while)\s+(.*):(.*)/)
+	{	
+		$condition = parseExpression($2);
+		#printf "#condition is $condition\n";
+		$expression = parseLine($3);
+		#printf "#expression is $expression\n";
+
+		$line = "$1 ($condition) \n{\n\t$expression}\n";
+
+	}
+	else
+	{
+		$line = '#'.$line;
+	}
+
+
+
+
+	$line = $line."\n"; 
+	return $line;
 }
 
 
@@ -97,22 +104,36 @@ sub parseLine
 sub parseExpression
 {
 	my ($expr) = @_;
-	$expr =~ s/([a-zA-Z]\w+)/\$$1/g;
+	$expr =~ s/\s*or\s+/ || /g;
+	$expr =~ s/\s*and\s*/ && /g;
+	$expr =~ s/\s*not\s*/ ! /g;
+	$expr =~ s/([a-zA-Z]\w*)/\$$1/g;
 	#print "$expr\n";
+	
 	return $expr;
 }
 
-sub removeWhitespaces
+sub simplifyPython
 {
-	my ($line) = @_;
-	print"$FUCK\n";
-	#remove leading white space
-	$line =~s/^\s.//g;
-	#remove white space from variable names
-	$line =~ s/\s*([$operators])\s*/$1/g;
-	return $line;
-}
+	my @inputLines = @_;
+	my @returnLines = ();
 
+	$lineReady = 1;
+	foreach my $line(@inputLines)
+	{
+		if ($line =~ /^while(.*)/)
+		{
+			print "whee\n";
+		}
+
+		if ($lineReady == 1)
+		{
+			push @returnLines, line;
+		}
+
+
+	}
+}
 
 
 sub dumbParseLine
