@@ -5,7 +5,7 @@
 
 
 $varnames = '.(?!print|for|while)*';
-$operators = '\-=\*\+\&\!\|';
+$operators = '\-=\*\+\&\!\|><:';
 %pythonKeywords = createKeywordHash();
 #$varnames = 'answer';
 
@@ -29,21 +29,25 @@ sub parseLine
 		$line =~s/^\s.//g;
 		#remove white space from variable names
 		$line =~ s/\s*([$operators])\s*/$1/g;
-
-
-		#add dollar signs to variable names
-		$line =~ s/([$operators])([a-zA-Z]\w+)/$1\$$2/g;
+		$line =~ s/\n//g;
 
 		if ($line =~ /^#!/)
 		{
 			#firstline
 			$line = "#!/usr/bin/perl -w";
 		}
+		
 		elsif ($line =~ /^\s*#/ || $line =~ /^\s*$/) 
 		{
 			# Blank & comment lines can be passed unchanged
 			$line = $line;
-		} 
+		}
+		elsif ($line =~ /^(\w)+=.*/)
+		{
+			#found expression, parse
+			#print "#expression is $line\n";
+			$line = parseExpression($line).";\n";
+		}
 		elsif ($line =~ /print\s*"(.*)"\s*$/) 
 		{
 		
@@ -54,21 +58,27 @@ sub parseLine
 		elsif ($line =~ /print\s+(.+)/)
 		{
 			#inline printing
-			$expression = $1;
+			$expression = parseExpression($1);
+
 			#print "$variables\n";
 			#$expression =~ s/([$operators])([a-zA-Z]\w+)/$1\$$2/g;
-			$line = 'print '.'$'.$expression.','.'"\n"'.';';		
+			$line = 'print '.$expression.','.'"\n"'.';';		
 		}
-		elsif ($line =~/(\w+)=(.*)/)
+		elsif ($line =~ /(if|while)\s+(.*):(.*)/)
 		{
-			#variable assignment
-			#print "WHOOP\n";
-			$line = '$'.$1.'='.$2.';';
+			$condition = parseExpression($2);
+			printf "#condition is $condition\n";
+			$expression = parseExpression($3);
+			printf "#expression is $expression\n";
+
+			$line = "$1 ($condition) \n { \n\t$expression \n }\n";
+
 		}
 		else
 		{
 			$line = '#'.$line;
 		}
+
 
 
 
@@ -80,6 +90,27 @@ sub parseLine
 	}
 
 	return @returnLines;
+}
+
+
+
+sub parseExpression
+{
+	my ($expr) = @_;
+	$expr =~ s/([a-zA-Z]\w+)/\$$1/g;
+	#print "$expr\n";
+	return $expr;
+}
+
+sub removeWhitespaces
+{
+	my ($line) = @_;
+	print"$FUCK\n";
+	#remove leading white space
+	$line =~s/^\s.//g;
+	#remove white space from variable names
+	$line =~ s/\s*([$operators])\s*/$1/g;
+	return $line;
 }
 
 
