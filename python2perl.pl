@@ -7,11 +7,15 @@
 $varnames = '.(?!print|for|while)*';
 
 $operators = '\-=\*\+\&\!\|><:/%';
-%pythonKeywords = createKeywordHash();
 #$varnames = 'answer';
 
-while (my $input = <>)
+my @simplifiedPython = simplifyPython(<>);
+#print "Parsed the pythin: \n";
+#print @simplifiedPython;
+foreach my $input (@simplifiedPython)
 {
+	
+	#print "$input \n";
 	$parsedLine = parseLine($input);
 	print $parsedLine;
 }
@@ -26,12 +30,14 @@ while (my $input = <>)
 sub parseLine
 {
 	my ($line) = @_;
-
+	
 	#remove leading white space
 	$line =~s/^\s.//g;
 	#remove white space from variable names
 	$line =~ s/\s*([$operators])\s*/$1/g;
 	$line =~ s/\n//g;
+
+	@lines = split(';', $line);
 
 	if ($line =~ /^#!/)
 	{
@@ -56,17 +62,6 @@ sub parseLine
 		#generic string matching
 		$line = "print \"$1\\n\";\n";
 	}
-	
-	elsif ($line =~ /^print\s+(.+);(.+)/)
-	{
-		#inline printing and continue FIXME
-		$expression1 = parseExpression($1);
-		$expression2 = parseExpression($2);
-
-		#print "#expression1 is $expression1 from $1 \n";
-		#$expression =~ s/([$operators])([a-zA-Z]\w+)/$1\$$2/g;
-		$line = 'print '.$expression1.','.'"\n"'.';'.$expression2."\n";		
-	}
 
 	elsif ($line =~ /^print\s+(.+)/)
 	{
@@ -79,12 +74,20 @@ sub parseLine
 	}
 	elsif ($line =~ /^(if|while)\s+(.*):(.*)/)
 	{	
-		$condition = parseExpression($2);
-		#printf "#condition is $condition\n";
-		$expression = parseLine($3);
-		#printf "#expression is $expression\n";
+		my $condition = parseExpression($2);
+		$line = "$1 ($condition) \n{\n";
 
-		$line = "$1 ($condition) \n{\n\t$expression}\n";
+		my $expressions = parseLine($3);
+		my @subexpressions = split (';', $3);
+		foreach  my $subexpr (@subexpressions)
+		{
+			chomp $subexpr;
+			$subexpr =~ s/^\s*//g;
+			$expression = parseLine($subexpr);
+			$line .= "\t$expression";
+			#print "$subexpr\n";
+		}
+		$line.="}\n";
 
 	}
 	else
@@ -108,7 +111,7 @@ sub parseExpression
 	$expr =~ s/\s*and\s*/ && /g;
 	$expr =~ s/\s*not\s*/ ! /g;
 	$expr =~ s/([a-zA-Z]\w*)/\$$1/g;
-	#print "$expr\n";
+	$expr =~ s/\$print/print/g;
 	
 	return $expr;
 }
@@ -117,108 +120,56 @@ sub simplifyPython
 {
 	my @inputLines = @_;
 	my @returnLines = ();
+	my $lineBuffer = ();
 
-	$lineReady = 1;
+	$inLoop = 0;
+	$currentTab = 0;
+
 	foreach my $line(@inputLines)
 	{
-		if ($line =~ /^while(.*)/)
+		$tabspaces = $line =~ m/^\t/g;
+
+		if ($inLoop == 1 && $tabspaces == 0)
 		{
-			print "whee\n";
+			$inLoop = 0;
+			push @returnLines, $lineBuffer;
+			$lineBuffer = '';
 		}
 
-		if ($lineReady == 1)
+
+		if ($line =~ /^while(.*):/)
 		{
-			push @returnLines, line;
+			$inLoop = 1;
 		}
+
+		if($inLoop)
+		{
+			chomp $line;
+			if (!($line =~ /^while(.*):/))
+			{
+				$line .= ";";
+			}
+		}
+
+		$lineBuffer .=$line;
+		if(!$inLoop)
+		{	#print "$lineBuffer\n";
+			push @returnLines, $lineBuffer;
+			$lineBuffer = '';
+		}
+
+		#print "$lineBuffer\n";
 
 
 	}
-}
-
-
-sub dumbParseLine
-{
-	my @lines = @_;
-	foreach my $line (@lines)
+	if($lineBuffer)
 	{
-		if ($line =~ /^#!/) 
-		{
-		
-			print "#!/usr/bin/perl -w\n";
-		} 
-		elsif ($line =~ /^\s*#/ || $line =~ /^\s*$/) 
-		{
-		
-			# Blank & comment lines can be passed unchanged
-			
-			print $line;
-		} 
-		elsif ($line =~ /print\s*"(.*)"\s*$/) 
-		{
-		
-			# Python's print print a new-line character by default
-			# so we need to add it explicitly to the Perl print statement
-			
-			print "print \"$1\\n\";\n";
-		}
-		#elsif ($line =~/(\w+)=(.*)/)
-		#{
-		#	#variable assignment
-		#	#print "WHOOP\n";
-		#	print "\$$1=$2;\n"
-		#}
-		#elsif ($line =~/print\s*(\w+)/)
-		#{
-		#	#variable assignment
-		#		#print "WHOOP\n";
-		#	print "print \"\$$1\\n\"; \n";
-		#} 
-		else 
-		{
-		
-			# Lines we can't translate are turned into comments
-			print "#raw output\n";
-			print "$line\n";
-		}
+		#print "$lineBuffer\n";
+		push @returnLines, $lineBuffer;
 	}
 
-}
 
-
-
-##Helpper functions not used for now---------------------
-sub removeWhitespaces
-{
-	my @lines = @_;
-	my @returnLines = ();
-	foreach my $line (@lines)
-	{
-		$line =~ s/\s*=\s*/=/g;
-		#$line =~ s/^\s*//g;
-		push @returnLines, $line;
-		
-	}
 
 	return @returnLines;
-
-
 }
 
-#Note - TokenSplit not working. placeholder for now
-sub tokenSplit
-{
-	my @lines = @_;
-
-	return split(/[*+=]/, @lines)
-
-}
-
-
-sub createKeywordHash
-{
-
-	my %keywords = {};
-	$keywords{print}++;
-
-	return %keywords;
-}
