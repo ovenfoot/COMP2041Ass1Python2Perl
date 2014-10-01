@@ -6,6 +6,7 @@
 
 #TODO: Figureout 2's complement
 
+
 $varnames = '.(?!print|for|while)*';
 
 $operators = '\-=\*\+\&\!\|></%^~';
@@ -75,10 +76,20 @@ sub parseLine
 		#generic string matching
 		$line = "$1 print \"$2\\n\";";
 	}
+	elsif ($line =~ /^(\s*)print\s*"(.*)"\s*\%\s*\(*([^\(\)]*)\)*/)
+	{
+		#formatted print statements. the inclusion of % is key
+		$whitespace = $1;
+		$formattedString = '"'.$2.'\n'.'"';
+		$arguments = parseExpression($3);
+		$line = "$whitespace"."printf($formattedString, $arguments);";
+	}
 	elsif ($line =~ /^(\s*)print\s*(.*)/)
 	{
-		$whitespace = $1;
 		#inline printing
+		#for 'print' or 'print x'
+		$whitespace = $1;
+		
 		if ($2)
 		{
 			$expression = parseExpression($2).",";
@@ -162,7 +173,12 @@ sub parseLine
 
 	elsif ($line =~/(\s*)(for)\s*(\w+)\s*in\s*(.*):/)
 	{
-		$line = "$1foreach my ".parseExpression($3)." ".parseExpression($4);
+		$itr = parseExpression($3);
+		$range = parseExpression($4);
+
+		#case to deal with range being an array instead of someting else
+		$range =~ s/^\$/\@/g;
+		$line = "$1foreach my ".$itr." "."($range)";
 
 
 	}
@@ -213,7 +229,8 @@ sub parseExpression
 	$expr =~ s/\s*not\s*/ ! /g;
 
 	
-	if ($expr =~ /([a-zA-Z]\w*)=range.*/)
+	if (($expr =~ /([a-zA-Z]\w*)=range.*/) ||
+		($expr =~ /([a-zA-Z]\w*)=sys.stdin.readlines/))
 	{
 		#deal with array assignments
 		$expr =~ s/([a-zA-Z]\w*)/\@$1/g;
@@ -229,29 +246,22 @@ sub parseExpression
 
 	$expr =~ s/[\$\@]print/print /g;
 	$expr =~ s/[\$\@]break/last;/g;
-	$expr =~ s/[\$\@]int\([\$\@]sys.[\$\@]stdin.[\$\@]readline\(\)\)/\<STDIN\>/g;
+	$expr =~ s/[\$\@]sys.[\$\@]stdin.[\$\@]readline(s)*\(\)/\<STDIN\>/g;
+	$expr =~ s/[\$\@](int)*\([\$\@]sys.[\$\@]stdin.[\$\@]readline(s)*\(\)\)/\<STDIN\>/g;
 
+	#handling range
     if ($expr =~ /[\$\@]*range\(\s*(.*),\s*(.*)\)/)
     {
     	$start = $1;
-    	$end = $2;
-    	#print "EEEEND $end\n";
-    	if($end =~ /(\$\w+)\+1/ )
-    	{
-    		$end = $1;
-    	}
-    	elsif ($end =~/\s*(\d+)\s*/)
-		{
-			$end = $1-1;
-		}
-    	else
-    	{
-    		$end .="-1";
-    	}
-    	#print "EEEEND $end\n";
+    	$end = pythonMinusOne($2);
     	$expr =~ s/[\$\@]*range\(\s*(.*),\s*(.*)\)/\($start..$end\)/g;
     }
-    
+    elsif ($expr =~ /[\$\@]*range\(\s*(.*)\s*\)/)
+    {
+    	$end = pythonMinusOne($1);
+    	$expr =~ s/[\$\@]*range\(\s*(.*)\s*\)/\(0..$end\)/g;
+    }
+
     $expr =~ s/[\$\@]*sys\.[\$\@]*stdin/\(\<STDIN\>\)/g;
 
     #handle len
@@ -267,10 +277,43 @@ sub parseExpression
 
     }
 
+    #fix string literals
+    if ($expr =~ /(.*)\"(.*)\"/)
+    {
+    	$lhs = $1;
+    	$stringLiteral = $2;
+    	$stringLiteral =~ s/\$//g;
+    	$expr = $lhs.'"'.$stringLiteral.'"';
+    	#print "$stringLiteral\n";
+    }
+
 	return $expr;
 }
 
+#helper function for range(). intelligently minuses 1 from the end of a range
+sub pythonMinusOne
+{
+	my ($expr) = @_;
 
+	if($expr =~ /(\$\w+)\+1/ )
+	{
+		$expr = $1;
+	}
+	elsif ($expr =~/\s*(\d+)\s*/)
+	{
+		$expr = $1-1;
+	}
+	else
+	{
+		$expr .="-1";
+	}
+
+	return $expr;
+
+
+}
+
+#analyses for tabs and places curly braces where necessary
 sub detabify
 {
 
@@ -278,8 +321,6 @@ sub detabify
 	my @indentStack = ();
 	my @returnLines = ();
 	my $lineBuffer = ();
-
-	$inLoop = 0;
 	
 	$indentStack[0] = 0;
 
@@ -347,6 +388,7 @@ sub detabify
 
 }
 
+#prints number of indents passed as input
 sub generateIndents
 {
     my ($noIndents) = @_;
@@ -356,7 +398,6 @@ sub generateIndents
     {
         $returnString.="\t";
     }
-
     return $returnString;
 
 }
