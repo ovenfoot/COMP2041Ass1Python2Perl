@@ -79,15 +79,11 @@ sub parseLine
         #print "original is $2 parsed split is "
 		my $condition = parseExpression($condition_phrase[0]);
 		$line = "$1 ($condition) \n";
-        for (my $i = 0; $i<$currIndent; $i++)
-        {
-            $line .= "\t";
-        }
+       	$line.= generateIndents($currIndent);
         $line.="{\n";
+
         $currIndent++;
-
         my $expressions = join(':', @condition_phrase[1..$#condition_phrase]);
-
 		my @subexpressions = split (';', $expressions);
 		foreach  my $subexpr (@subexpressions)
 		{
@@ -96,21 +92,18 @@ sub parseLine
 			$expression = parseLine($subexpr);
 
             #indenting
-            for (my $i = 0; $i<$currIndent; $i++)
-            {
-                $line .= "\t";
-            }
-
+        	$line.= generateIndents($currIndent);
 			$line .= "$expression";
 			#print "$subexpr\n";
 		}
 
         $currIndent--;
-        for (my $i = 0; $i<$currIndent; $i++)
-        {
-            $line .= "\t";
-        }
-		$line.="}\n";
+        #for (my $i = 0; $i<$currIndent; $i++)
+        #{
+            #$line .= "\t";
+            #}
+		$line.= generateIndents($currIndent);
+        $line.="}\n";
 
 	}
     elsif($line =~ /^\s*(break|continue)(\s*|\n)/)
@@ -203,4 +196,13 @@ sub simplifyPython
 sub generateIndents
 {
     my ($noIndents) = @_;
+    my $returnString = '';
+
+    for (my $i =0; $i<$noIndents; $i++)
+    {
+        $returnString.="\t";
+    }
+
+    return $returnString;
+
 }
