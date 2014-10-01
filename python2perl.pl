@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# Starting point for COMP2041/9041 assignment 
+# Starting point for COMP2041/9041 assignment
 # http://www.cse.unsw.edu.au/~cs2041/assignments/python2perl
 # written by andrewt@cse.unsw.edu.au September 2014
 
@@ -14,7 +14,7 @@ my @simplifiedPython = simplifyPython(<>);
 #print @simplifiedPython;
 foreach my $input (@simplifiedPython)
 {
-	
+
 	#print "$input \n";
 	$parsedLine = parseLine($input);
 	print $parsedLine;
@@ -30,7 +30,7 @@ foreach my $input (@simplifiedPython)
 sub parseLine
 {
 	my ($line) = @_;
-	
+
 	#remove leading white space
 	$line =~s/^\s.//g;
 	#remove white space from variable names
@@ -44,8 +44,8 @@ sub parseLine
 		#firstline
 		$line = "#!/usr/bin/perl -w";
 	}
-	
-	elsif ($line =~ /^\s*#/ || $line =~ /^\s*$/) 
+
+	elsif ($line =~ /^\s*#/ || $line =~ /^\s*$/)
 	{
 		# Blank & comment lines can be passed unchanged
 		$line = $line;
@@ -56,9 +56,9 @@ sub parseLine
 		#print "#expression is $line\n";
 		$line = parseExpression($line).";\n";
 	}
-	elsif ($line =~ /^print\s*"(.*)"\s*$/) 
+	elsif ($line =~ /^print\s*"(.*)"\s*$/)
 	{
-	
+
 		#generic string matching
 		$line = "print \"$1\\n\";\n";
 	}
@@ -70,10 +70,10 @@ sub parseLine
 
 		#print "$variables\n";
 		#$expression =~ s/([$operators])([a-zA-Z]\w+)/$1\$$2/g;
-		$line = 'print '."$expression".','.'"\n"'.';';		
+		$line = 'print '."$expression".','.'"\n"'.';';
 	}
 	elsif ($line =~ /^(if|while)\s+(.*):(.*)/)
-	{	
+	{
 		my $condition = parseExpression($2);
 		$line = "$1 ($condition) \n{\n";
 
@@ -98,7 +98,7 @@ sub parseLine
 
 
 
-	$line = $line."\n"; 
+	$line = $line."\n";
 	return $line;
 }
 
@@ -112,7 +112,7 @@ sub parseExpression
 	$expr =~ s/\s*not\s*/ ! /g;
 	$expr =~ s/([a-zA-Z]\w*)/\$$1/g;
 	$expr =~ s/\$print/print/g;
-	
+
 	return $expr;
 }
 
@@ -127,7 +127,7 @@ sub simplifyPython
 
 	foreach my $line(@inputLines)
 	{
-		$tabspaces = $line =~ m/^\t/g;
+		$tabspaces = $line =~ m/^\s/g;
 
 		if ($inLoop == 1 && $tabspaces == 0)
 		{
