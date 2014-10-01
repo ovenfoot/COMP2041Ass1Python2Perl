@@ -46,7 +46,7 @@ sub parseLine
 	#remove leading white space
 	#$line =~s/^\s.//g;
 	#remove white space from variable names
-	$line =~ s/\s*([$operators])\s*/$1/g;
+	#$line =~ s/\s*([$operators])\s*/$1/g;
 	chomp $line;
 	#$line =~ s/\n//g;
 	#@lines = split(';', $line);
@@ -62,7 +62,7 @@ sub parseLine
 		# Blank & comment lines can be passed unchanged
 		$line = $line;
 	}
-	elsif ($line =~ /^(\s*)(\w)+[$operators].*/)
+	elsif ($line =~ /^(\s*)(\w)+\s*[$operators].*/)
 	{
 		#found expression, parse
 		#print "#expression is $line\n";
@@ -88,9 +88,9 @@ sub parseLine
 		#$expression =~ s/([$operators])([a-zA-Z]\w+)/$1\$$2/g;
 		$line = "$1".'print '."$expression".'"\n"'.';';
 	}
-	elsif ($line =~ /^(\s*)sys.stdout.write\s*\("(.*)"\)/)
+	elsif ($line =~ /^(\s*)sys.stdout.write\s*\((.*)\)/)
 	{
-		$line = "$1print ".'"'."$2".'"'.";";
+		$line = "$1print $2;";
 	}
 	elsif ($line =~ /(\s*)(if|while|else)\s*(.*)/)
 	{
@@ -174,6 +174,7 @@ sub parseExpression
 {
 	my ($expr) = @_;
 	
+	$expr =~ s/\s*([$operators])\s*/$1/g;
 	#Generic operators
 	$expr =~ s/^\s*//g;
 	$expr =~ s/\s*or\s+/ || /g;
@@ -193,6 +194,7 @@ sub parseExpression
 
 	$expr =~ s/[\$\@]print/print /g;
 	$expr =~ s/[\$\@]break/last;/g;
+	$expr =~ s/[\$\@]int\([\$\@]sys.[\$\@]stdin.[\$\@]readline\(\)\)/\<STDIN\>/g;
 
     if ($expr =~ /[\$\@]*range\(\s*(.*),\s*(.*)\)/)
     {
