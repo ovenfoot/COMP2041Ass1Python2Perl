@@ -8,7 +8,7 @@ $varnames = '.(?!print|for|while)*';
 
 $operators = '\-=\*\+\&\!\|><:/%';
 #$varnames = 'answer';
-
+$currIndent = 0;
 my @simplifiedPython = simplifyPython(<>);
 #print "Parsed the pythin: \n";
 #print @simplifiedPython;
@@ -72,24 +72,51 @@ sub parseLine
 		#$expression =~ s/([$operators])([a-zA-Z]\w+)/$1\$$2/g;
 		$line = 'print '."$expression".','.'"\n"'.';';
 	}
-	elsif ($line =~ /^(if|while)\s+(.*):(.*)/)
+	elsif ($line =~ /^(if|while)\s+(.*)/)
 	{
-		my $condition = parseExpression($2);
-		$line = "$1 ($condition) \n{\n";
 
-		my $expressions = parseLine($3);
-		my @subexpressions = split (';', $3);
+        my @condition_phrase = split (':',$2);
+        #print "original is $2 parsed split is "
+		my $condition = parseExpression($condition_phrase[0]);
+		$line = "$1 ($condition) \n";
+        for (my $i = 0; $i<$currIndent; $i++)
+        {
+            $line .= "\t";
+        }
+        $line.="{\n";
+        $currIndent++;
+
+        my $expressions = join(':', @condition_phrase[1..$#condition_phrase]);
+
+		my @subexpressions = split (';', $expressions);
 		foreach  my $subexpr (@subexpressions)
 		{
 			chomp $subexpr;
 			$subexpr =~ s/^\s*//g;
 			$expression = parseLine($subexpr);
-			$line .= "\t$expression";
+
+            #indenting
+            for (my $i = 0; $i<$currIndent; $i++)
+            {
+                $line .= "\t";
+            }
+
+			$line .= "$expression";
 			#print "$subexpr\n";
 		}
+
+        $currIndent--;
+        for (my $i = 0; $i<$currIndent; $i++)
+        {
+            $line .= "\t";
+        }
 		$line.="}\n";
 
 	}
+    elsif($line =~ /^\s*(break|continue)(\s*|\n)/)
+    {
+        $line = parseExpression($1);
+    }
 	else
 	{
 		$line = '#'.$line;
@@ -112,7 +139,7 @@ sub parseExpression
 	$expr =~ s/\s*not\s*/ ! /g;
 	$expr =~ s/([a-zA-Z]\w*)/\$$1/g;
 	$expr =~ s/\$print/print/g;
-
+    $expr =~ s/\$break/last;/g;
 	return $expr;
 }
 
@@ -173,3 +200,7 @@ sub simplifyPython
 	return @returnLines;
 }
 
+sub generateIndents
+{
+    my ($noIndents) = @_;
+}
