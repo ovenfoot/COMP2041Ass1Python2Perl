@@ -4,40 +4,51 @@
 # written by andrewt@cse.unsw.edu.au September 2014
 
 
+#TODO: Figureout 2's complement
+
 $varnames = '.(?!print|for|while)*';
 
-$operators = '\-=\*\+\&\!\|><:/%';
+$operators = '\-=\*\+\&\!\|></%^~';
 #$varnames = 'answer';
 $currIndent = 0;
-my @simplifiedPython = simplifyPython(<>);
+my @simplifiedPython = detabify(<>);
+#print @simplifiedPython;
 #print "Parsed the pythin: \n";
 #print @simplifiedPython;
 foreach my $input (@simplifiedPython)
 {
 
-	#print "$input \n";
+	#print "input: $input";
 	$parsedLine = parseLine($input);
-	print $parsedLine;
+	#print "parsed: $parsedLine";
+	push @parsedLines, $parsedLine;
 }
+
+
+print @parsedLines;
+#@perlOutput = detabify (@parsedLines);
+
+#print @perlOutput;
+
 #@partParsedLines = tokenSplit(@partParsedLines);
 #print "\n------------\n\n";
 
 
 
 #dumbParseLine(@partParsedLines);
-
+#
 
 sub parseLine
 {
 	my ($line) = @_;
 
 	#remove leading white space
-	$line =~s/^\s.//g;
+	#$line =~s/^\s.//g;
 	#remove white space from variable names
 	$line =~ s/\s*([$operators])\s*/$1/g;
-	$line =~ s/\n//g;
-
-	@lines = split(';', $line);
+	chomp $line;
+	#$line =~ s/\n//g;
+	#@lines = split(';', $line);
 
 	if ($line =~ /^#!/)
 	{
@@ -50,65 +61,88 @@ sub parseLine
 		# Blank & comment lines can be passed unchanged
 		$line = $line;
 	}
-	elsif ($line =~ /^(\w)+=.*/)
+	elsif ($line =~ /^(\s*)(\w)+[$operators].*/)
 	{
 		#found expression, parse
 		#print "#expression is $line\n";
-		$line = parseExpression($line).";\n";
+
+		$line = $1.parseExpression($line).";\n";
 	}
-	elsif ($line =~ /^print\s*"(.*)"\s*$/)
+	elsif ($line =~ /^(\s*)print\s*"(.*)"\s*$/)
 	{
 
 		#generic string matching
-		$line = "print \"$1\\n\";\n";
+		$line = "$1 print \"$2\\n\";";
 	}
 
-	elsif ($line =~ /^print\s+(.+)/)
+	elsif ($line =~ /^(\s*)print\s+(.+)/)
 	{
 		#inline printing
-		$expression = parseExpression($1);
+		$expression = parseExpression($2);
 
 		#print "$variables\n";
 		#$expression =~ s/([$operators])([a-zA-Z]\w+)/$1\$$2/g;
-		$line = 'print '."$expression".','.'"\n"'.';';
+		$line = "$1".'print '."$expression".','.'"\n"'.';';
 	}
-	elsif ($line =~ /^(if|while)\s+(.*)/)
+	elsif ($line =~ /(\s*)(if|while|else)\s*(.*)/)
 	{
-
-        my @condition_phrase = split (':',$2);
-        #print "original is $2 parsed split is "
+        #seperate condition from the rest of the phrase
+        my @condition_phrase = split (':',$3);
 		my $condition = parseExpression($condition_phrase[0]);
-		$line = "$1 ($condition) \n";
+		$whitespace = $1;
+        $line = "$1$2";
+        if (!($2 =~ /else/))
+        {
+            $line.="($condition)";
+        }
        	$line.= generateIndents($currIndent);
-        $line.="{\n";
+        #$currIndent++;
 
-        $currIndent++;
+        #print "#conditon phrase is @condition_phrase\n";
         my $expressions = join(':', @condition_phrase[1..$#condition_phrase]);
-		my @subexpressions = split (';', $expressions);
-		foreach  my $subexpr (@subexpressions)
-		{
-			chomp $subexpr;
-			$subexpr =~ s/^\s*//g;
-			$expression = parseLine($subexpr);
-
-            #indenting
+        $expressions =~ s/^\s*//g;
+        if ($expressions)
+        {
+        	#print "#FOOOOO $expressions\n";
         	$line.= generateIndents($currIndent);
-			$line .= "$expression";
-			#print "$subexpr\n";
-		}
+        	$line.="\n".$whitespace."{\n";
+        	$currIndent++;
+       		$line.= $whitespace."\t";
+			my @subexpressions = split (';', $expressions);
+	        #print "#expressions are $expressions\n";
+	        
 
+	        #join the rest of the phrase
+
+			foreach  my $subexpr (@subexpressions)
+			{
+				chomp $subexpr;
+				$subexpr =~ s/^\s*//g;
+				#print "#subexpr is $subexpr";
+				$expression = parseLine($subexpr);
+
+	            #indenting
+	        	$line.= generateIndents($currIndent);
+				$line .= "$expression";
+				#print "$subexpr\n";
+			}
+		}
         $currIndent--;
-        #for (my $i = 0; $i<$currIndent; $i++)
-        #{
-            #$line .= "\t";
-            #}
 		$line.= generateIndents($currIndent);
-        $line.="}\n";
+		if($expressions)
+		{
+			$line.="\n".$whitespace."}\n";
+		}
 
 	}
     elsif($line =~ /^\s*(break|continue)(\s*|\n)/)
     {
+    	#print "#found print \n";
         $line = parseExpression($1);
+    }
+    elsif ($line =~/[\{\}]/)
+    {
+    	$line = $line;
     }
 	else
 	{
@@ -127,71 +161,168 @@ sub parseLine
 sub parseExpression
 {
 	my ($expr) = @_;
+	$expr =~ s/^\s*//g;
 	$expr =~ s/\s*or\s+/ || /g;
 	$expr =~ s/\s*and\s*/ && /g;
 	$expr =~ s/\s*not\s*/ ! /g;
 	$expr =~ s/([a-zA-Z]\w*)/\$$1/g;
-	$expr =~ s/\$print/print/g;
+	$expr =~ s/\$print/print /g;
     $expr =~ s/\$break/last;/g;
 	return $expr;
 }
 
-sub simplifyPython
+
+sub detabify
 {
+
 	my @inputLines = @_;
+	my @indentStack = ();
 	my @returnLines = ();
 	my $lineBuffer = ();
 
 	$inLoop = 0;
-	$currentTab = 0;
+	
+	$indentStack[0] = 0;
 
 	foreach my $line(@inputLines)
 	{
-		$tabspaces = $line =~ m/^\s/g;
+		$tabstring = $line;
+		@tabarray = $tabstring =~ m/^\s+/g;
+		$tabstring = $tabarray[0];
+		@tabarray = $tabstring =~ m/(\s)/g;
+		$tabspaces = $#tabarray+1;
 
-		if ($inLoop == 1 && $tabspaces == 0)
+		#print "#$tabspaces $line";
+
+		$line =~ s/^(\s*)//g;
+		
+		
+		if (!($line =~/^\s*#/) && !($line =~/^\s*$/))
 		{
-			$inLoop = 0;
-			push @returnLines, $lineBuffer;
-			$lineBuffer = '';
-		}
 
-
-		if ($line =~ /^while(.*):/)
-		{
-			$inLoop = 1;
-		}
-
-		if($inLoop)
-		{
-			chomp $line;
-			if (!($line =~ /^while(.*):/))
+			if ($tabspaces < 0)
 			{
-				$line .= ";";
+				$tabspaces = 0;
 			}
-		}
 
-		$lineBuffer .=$line;
-		if(!$inLoop)
-		{	#print "$lineBuffer\n";
+			if ($tabspaces > $indentStack[-1] )
+			{
+				#print "INCREASE\n";
+				$lineBuffer .=generateIndents($#indentStack)."{\n";
+				push @returnLines, $lineBuffer;
+				$lineBuffer = '';
+				push @indentStack, $tabspaces;
+			}
+			elsif ($tabspaces < $indentStack[-1])
+			{
+				#print "DEACREASE\n";
+				while ($tabspaces < $indentStack[-1])
+				{
+					pop @indentStack;
+					$lineBuffer.="\n".generateIndents($#indentStack)."}\n";
+					push @returnLines, $lineBuffer;
+					$lineBuffer = '';
+				}
+
+
+			}
+
+
+			$lineBuffer.=generateIndents($#indentStack).$line;
+
 			push @returnLines, $lineBuffer;
 			$lineBuffer = '';
 		}
-
-		#print "$lineBuffer\n";
-
 
 	}
-	if($lineBuffer)
+	while ($indentStack[-1] > 0)
 	{
-		#print "$lineBuffer\n";
+		pop @indentStack;
+		$lineBuffer.="\n".generateIndents($#indentStack)."}\n";
 		push @returnLines, $lineBuffer;
 	}
 
 
-
 	return @returnLines;
+
+
 }
+
+# sub simplifyPython
+# {
+# 	my @inputLines = @_;
+# 	my @indentStack = @_;
+# 	my @returnLines = ();
+# 	my $lineBuffer = ();
+
+# 	$inLoop = 0;
+# 	$currentTab = 0;
+
+# 	foreach my $line(@inputLines)
+# 	{
+# 		$line =~ /^(\s+)/;
+# 		@tabarray = $1 =~ m/(\s)/g;
+# 		$tabspaces = $#tabarray;
+
+# 		print "$tabspaces $line";
+# 		$line =~ s/^\s*//g;
+# 		if ($tabspaces > $currentTab && $tabspaces > 0)
+# 		{
+# 			#print "INCREASE\n";
+# 			$lineBuffer .= "{\n";
+# 			$currentTab = $tabspaces;
+# 		}
+# 		elsif ($tabspaces < $currentTab && $tabspaces > 0)
+# 		{
+# 			#print "DEACREASE\n";
+# 			$lineBuffer.="\n}";
+# 			$currentTab = $tabspaces;
+# 		}
+
+# 		if ($inLoop == 1 && $tabspaces == 0)
+# 		{
+# 			$inLoop = 0;
+# 			push @returnLines, $lineBuffer;
+# 			$lineBuffer = '';
+# 		}
+
+
+# 		if ($line =~ /^while(.*):/)
+# 		{
+# 			$inLoop = 1;
+# 		}
+
+# 		if($inLoop)
+# 		{
+# 			#chomp $line;
+#             #if (!($line =~ /^(while|if|else)(.*):/))
+# 			if (!($line =~ /:/))
+#             {
+# 				$line .= ";";
+# 			}
+# 		}
+
+# 		$lineBuffer .=$line;
+# 		if(!$inLoop)
+# 		{	#print "$lineBuffer\n";
+# 			push @returnLines, $lineBuffer;
+# 			$lineBuffer = '';
+# 		}
+
+# 		#print "$lineBuffer\n";
+
+
+# 	}
+# 	if($lineBuffer)
+# 	{
+# 		#print "$lineBuffer\n";
+# 		push @returnLines, $lineBuffer;
+# 	}
+
+
+
+# 	return @returnLines;
+# }
 
 sub generateIndents
 {
@@ -206,3 +337,4 @@ sub generateIndents
     return $returnString;
 
 }
+
