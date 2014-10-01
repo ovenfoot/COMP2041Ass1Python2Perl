@@ -15,6 +15,7 @@ my @simplifiedPython = detabify(<>);
 #print @simplifiedPython;
 #print "Parsed the pythin: \n";
 #print @simplifiedPython;
+push @parsedLines, "#!/usr/bin/perl -w\n";
 foreach my $input (@simplifiedPython)
 {
 
@@ -74,15 +75,22 @@ sub parseLine
 		#generic string matching
 		$line = "$1 print \"$2\\n\";";
 	}
-
-	elsif ($line =~ /^(\s*)print\s+(.+)/)
+	elsif ($line =~ /^(\s*)print\s*(.*)/)
 	{
 		#inline printing
-		$expression = parseExpression($2);
+		if ($2)
+		{
+			$expression = parseExpression($2).",";
+		}
+		
 
 		#print "$variables\n";
 		#$expression =~ s/([$operators])([a-zA-Z]\w+)/$1\$$2/g;
-		$line = "$1".'print '."$expression".','.'"\n"'.';';
+		$line = "$1".'print '."$expression".'"\n"'.';';
+	}
+	elsif ($line =~ /^(\s*)sys.stdout.write\s*\("(.*)"\)/)
+	{
+		$line = "$1print ".'"'."$2".'"'.";";
 	}
 	elsif ($line =~ /(\s*)(if|while|else)\s*(.*)/)
 	{
@@ -176,18 +184,16 @@ sub parseExpression
 	{
 		#deal with array assignments
 		$expr =~ s/([a-zA-Z]\w*)/\@$1/g;
-
 	}
 	else
 	{
 		#non array assignments
 		$expr =~ s/([a-zA-Z]\w*)/\$$1/g;
-
 	}
 
 	$expr =~ s/[\$\@]print/print /g;
 	$expr =~ s/[\$\@]break/last;/g;
-	
+
     if ($expr =~ /[\$\@]*range\(\s*(.*),\s*(.*)\)/)
     {
     	$start = $1;
