@@ -165,14 +165,24 @@ sub parseLine
 sub parseExpression
 {
 	my ($expr) = @_;
-	$expr =~ s/^\s*//g;
-	$expr =~ s/\s*or\s+/ || /g;
-	$expr =~ s/\s*and\s*/ && /g;
-	$expr =~ s/\s*not\s*/ ! /g;
-	$expr =~ s/([a-zA-Z]\w*)/\$$1/g;
-	$expr =~ s/\$print/print /g;
-    $expr =~ s/\$break/last;/g;
-    if ($expr =~ /\$range\(\s*(.*),\s*(.*)\)/)
+	
+	#print $expr;
+	if ($expr =~ /([a-zA-Z]\w*)=range.*/)
+	{
+		$expr =~ s/([a-zA-Z]\w*)/\@$1/g;
+
+	}
+	else
+	{
+		$expr =~ s/^\s*//g;
+		$expr =~ s/\s*or\s+/ || /g;
+		$expr =~ s/\s*and\s*/ && /g;
+		$expr =~ s/\s*not\s*/ ! /g;
+		$expr =~ s/([a-zA-Z]\w*)/\$$1/g;
+		$expr =~ s/\$print/print /g;
+	    $expr =~ s/\$break/last;/g;
+	}
+    if ($expr =~ /[\$\@]*range\(\s*(.*),\s*(.*)\)/)
     {
     	$start = $1;
     	$end = $2;
@@ -190,7 +200,7 @@ sub parseExpression
     		$end .="-1";
     	}
     	#print "EEEEND $end\n";
-    	$expr =~ s/\$range\(\s*(.*),\s*(.*)\)/\($start..$end\)/g;
+    	$expr =~ s/[\$\@]*range\(\s*(.*),\s*(.*)\)/\($start..$end\)/g;
     }
     
 	return $expr;
