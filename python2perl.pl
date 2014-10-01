@@ -92,17 +92,24 @@ sub parseLine
 	{
 		$line = "$1print $2;";
 	}
-	elsif ($line =~ /(\s*)(if|while|else)\s*(.*)/)
+	elsif ($line =~ /(\s*)(elif|if|while|else)\s*(.*)/)
 	{
+		$whitespace = $1;
+		$keyword = $2;
         #seperate condition from the rest of the phrase
         my @condition_phrase = split (':',$3);
 		my $condition = parseExpression($condition_phrase[0]);
-		$whitespace = $1;
-        $line = "$1$2";
-        if (!($2 =~ /else/))
+		
+		$keyword =~ s/elif/elsif/g;
+		$line = "$whitespace$keyword";
+
+        if (!($keyword =~ /else/))
         {
             $line.="($condition)";
         }
+
+        
+
        	$line.= generateIndents($currIndent);
         #$currIndent++;
 
