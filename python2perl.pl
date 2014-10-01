@@ -110,8 +110,6 @@ sub parseLine
        		$line.= $whitespace."\t";
 			my @subexpressions = split (';', $expressions);
 	        #print "#expressions are $expressions\n";
-	        
-
 	        #join the rest of the phrase
 
 			foreach  my $subexpr (@subexpressions)
@@ -135,10 +133,16 @@ sub parseLine
 		}
 
 	}
+	elsif ($line =~/(\s*)(for)\s*(\w+)\s*in\s*(.*):/)
+	{
+		$line = "$1$2 my ".parseExpression($3)." ".parseExpression($4);
+
+
+	}
     elsif($line =~ /^\s*(break|continue)(\s*|\n)/)
     {
     	#print "#found print \n";
-        $line = parseExpression($1);
+        $line = generateIndents($currIndent).parseExpression($1);
     }
     elsif ($line =~/[\{\}]/)
     {
@@ -168,6 +172,27 @@ sub parseExpression
 	$expr =~ s/([a-zA-Z]\w*)/\$$1/g;
 	$expr =~ s/\$print/print /g;
     $expr =~ s/\$break/last;/g;
+    if ($expr =~ /\$range\(\s*(.*),\s*(.*)\)/)
+    {
+    	$start = $1;
+    	$end = $2;
+    	#print "EEEEND $end\n";
+    	if($end =~ /(\$\w+)\+1/ )
+    	{
+    		$end = $1;
+    	}
+    	elsif ($end =~/\s*(\d+)\s*/)
+		{
+			$end = $1-1;
+		}
+    	else
+    	{
+    		$end .="-1";
+    	}
+    	#print "EEEEND $end\n";
+    	$expr =~ s/\$range\(\s*(.*),\s*(.*)\)/\($start..$end\)/g;
+    }
+    
 	return $expr;
 }
 
@@ -247,82 +272,6 @@ sub detabify
 
 
 }
-
-# sub simplifyPython
-# {
-# 	my @inputLines = @_;
-# 	my @indentStack = @_;
-# 	my @returnLines = ();
-# 	my $lineBuffer = ();
-
-# 	$inLoop = 0;
-# 	$currentTab = 0;
-
-# 	foreach my $line(@inputLines)
-# 	{
-# 		$line =~ /^(\s+)/;
-# 		@tabarray = $1 =~ m/(\s)/g;
-# 		$tabspaces = $#tabarray;
-
-# 		print "$tabspaces $line";
-# 		$line =~ s/^\s*//g;
-# 		if ($tabspaces > $currentTab && $tabspaces > 0)
-# 		{
-# 			#print "INCREASE\n";
-# 			$lineBuffer .= "{\n";
-# 			$currentTab = $tabspaces;
-# 		}
-# 		elsif ($tabspaces < $currentTab && $tabspaces > 0)
-# 		{
-# 			#print "DEACREASE\n";
-# 			$lineBuffer.="\n}";
-# 			$currentTab = $tabspaces;
-# 		}
-
-# 		if ($inLoop == 1 && $tabspaces == 0)
-# 		{
-# 			$inLoop = 0;
-# 			push @returnLines, $lineBuffer;
-# 			$lineBuffer = '';
-# 		}
-
-
-# 		if ($line =~ /^while(.*):/)
-# 		{
-# 			$inLoop = 1;
-# 		}
-
-# 		if($inLoop)
-# 		{
-# 			#chomp $line;
-#             #if (!($line =~ /^(while|if|else)(.*):/))
-# 			if (!($line =~ /:/))
-#             {
-# 				$line .= ";";
-# 			}
-# 		}
-
-# 		$lineBuffer .=$line;
-# 		if(!$inLoop)
-# 		{	#print "$lineBuffer\n";
-# 			push @returnLines, $lineBuffer;
-# 			$lineBuffer = '';
-# 		}
-
-# 		#print "$lineBuffer\n";
-
-
-# 	}
-# 	if($lineBuffer)
-# 	{
-# 		#print "$lineBuffer\n";
-# 		push @returnLines, $lineBuffer;
-# 	}
-
-
-
-# 	return @returnLines;
-# }
 
 sub generateIndents
 {
