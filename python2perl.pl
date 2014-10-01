@@ -77,16 +77,26 @@ sub parseLine
 	}
 	elsif ($line =~ /^(\s*)print\s*(.*)/)
 	{
+		$whitespace = $1;
 		#inline printing
 		if ($2)
 		{
 			$expression = parseExpression($2).",";
 		}
-		
 
-		#print "$variables\n";
-		#$expression =~ s/([$operators])([a-zA-Z]\w+)/$1\$$2/g;
-		$line = "$1".'print '."$expression".'"\n"'.';';
+		#decide whether or not to auto include newline
+		if ($expression =~ /\,,$/)
+		{
+			#print "FUUU\n";
+			$expression =~ s/,$//g;
+			$line = $whitespace.'print '.$expression.';';
+		}
+		else
+		{
+			$line = $whitespace.'print '.$expression.'"\n"'.';';
+		}
+
+		
 	}
 	elsif ($line =~ /^(\s*)sys.stdout.write\s*\((.*)\)/)
 	{
@@ -96,6 +106,7 @@ sub parseLine
 	{
 		$whitespace = $1;
 		$keyword = $2;
+
         #seperate condition from the rest of the phrase
         my @condition_phrase = split (':',$3);
 		my $condition = parseExpression($condition_phrase[0]);
@@ -148,9 +159,10 @@ sub parseLine
 		}
 
 	}
+
 	elsif ($line =~/(\s*)(for)\s*(\w+)\s*in\s*(.*):/)
 	{
-		$line = "$1$2 my ".parseExpression($3)." ".parseExpression($4);
+		$line = "$1foreach my ".parseExpression($3)." ".parseExpression($4);
 
 
 	}
@@ -158,6 +170,13 @@ sub parseLine
     {
     	#print "#found print \n";
         $line = generateIndents($currIndent).parseExpression($1);
+    }
+    elsif ($line =~ /(\s*)(\w+)\.append\((\w+)\)/)
+    {
+    	$expression = parseExpression($3);
+    	#print "beforeappend is $2";
+    	$line = "$1push \@$2, $expression;";
+
     }
     elsif ($line =~/[\{\}]/)
     {
@@ -176,7 +195,12 @@ sub parseLine
 }
 
 
+sub parseFunction
+{
+	my ($expr) = @_;
+	print "found function\n";
 
+}
 sub parseExpression
 {
 	my ($expr) = @_;
@@ -187,6 +211,7 @@ sub parseExpression
 	$expr =~ s/\s*or\s+/ || /g;
 	$expr =~ s/\s*and\s*/ && /g;
 	$expr =~ s/\s*not\s*/ ! /g;
+
 	
 	if ($expr =~ /([a-zA-Z]\w*)=range.*/)
 	{
@@ -198,6 +223,9 @@ sub parseExpression
 		#non array assignments
 		$expr =~ s/([a-zA-Z]\w*)/\$$1/g;
 	}
+
+	#empty list;
+	$expr =~ s/\[\]/\(\)/g;
 
 	$expr =~ s/[\$\@]print/print /g;
 	$expr =~ s/[\$\@]break/last;/g;
@@ -224,6 +252,21 @@ sub parseExpression
     	$expr =~ s/[\$\@]*range\(\s*(.*),\s*(.*)\)/\($start..$end\)/g;
     }
     
+    $expr =~ s/[\$\@]*sys\.[\$\@]*stdin/\(\<STDIN\>\)/g;
+
+    #handle len
+    if( $expr =~ /(.*)[\$\@]len\(([\$\@]*\w+)\)(.*)/)
+    {
+    	$lhs = $1;
+    	$array = $2;
+    	$rhs = $3;
+    	#print "$1 --> $2--->$3\n";
+    	$array =~ s/\$/\@/g;
+    	#print "$array \n";
+    	$expr = $lhs.$array.$rhs;
+
+    }
+
 	return $expr;
 }
 
