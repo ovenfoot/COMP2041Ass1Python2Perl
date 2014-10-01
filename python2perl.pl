@@ -166,22 +166,28 @@ sub parseExpression
 {
 	my ($expr) = @_;
 	
-	#print $expr;
+	#Generic operators
+	$expr =~ s/^\s*//g;
+	$expr =~ s/\s*or\s+/ || /g;
+	$expr =~ s/\s*and\s*/ && /g;
+	$expr =~ s/\s*not\s*/ ! /g;
+	
 	if ($expr =~ /([a-zA-Z]\w*)=range.*/)
 	{
+		#deal with array assignments
 		$expr =~ s/([a-zA-Z]\w*)/\@$1/g;
 
 	}
 	else
 	{
-		$expr =~ s/^\s*//g;
-		$expr =~ s/\s*or\s+/ || /g;
-		$expr =~ s/\s*and\s*/ && /g;
-		$expr =~ s/\s*not\s*/ ! /g;
+		#non array assignments
 		$expr =~ s/([a-zA-Z]\w*)/\$$1/g;
-		$expr =~ s/\$print/print /g;
-	    $expr =~ s/\$break/last;/g;
+
 	}
+
+	$expr =~ s/[\$\@]print/print /g;
+	$expr =~ s/[\$\@]break/last;/g;
+	
     if ($expr =~ /[\$\@]*range\(\s*(.*),\s*(.*)\)/)
     {
     	$start = $1;
