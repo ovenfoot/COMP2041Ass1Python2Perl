@@ -65,16 +65,22 @@ sub parseLine
 	}
 	elsif ($line =~ /^(\s*)(\w)+\s*[$operators].*/)
 	{
-		#found expression, parse
-		#print "#expression is $line\n";
-
+		#mathematical expression. 
 		$line = $1.parseExpression($line).";\n";
 	}
-	elsif ($line =~ /^(\s*)print\s*"(.*)"\s*$/)
+	elsif ($line =~ /^(\s*)print\s*\(*"(.*)"\)*\s*$/)
 	{
 
-		#generic string matching
-		$line = "$1 print \"$2\\n\";";
+		#generic string printing, reproduce
+		$string = $2;
+		$whitespace = $1;
+
+		#for python concatenate string printing, replace ", " with a space
+		$string =~ s/\s*\"\s*\,\s*\"\s*/ /g;
+		print "#string is $string\n";
+		$line = "$whitespace print \"$string\\n\";";
+
+
 	}
 	elsif ($line =~ /^(\s*)print\s*"(.*)"\s*\%\s*\(*([^\(\)]*)\)*/)
 	{
@@ -109,12 +115,15 @@ sub parseLine
 
 		
 	}
-	elsif ($line =~ /^(\s*)sys.stdout.write\s*\((.*)\)/)
+	elsif ($line =~ /^(\s*)sys.stdout.write\s*\(['\"](.*)['\"]\)/)
 	{
-		$line = "$1print $2;";
+		#stdout.write operates the same way as print
+		$line = "$1print \"$2\";";
 	}
 	elsif ($line =~ /(\s*)(elif|if|while|else)\s*(.*)/)
 	{
+		#basic conditionals.
+		#extra code to handle 
 		$whitespace = $1;
 		$keyword = $2;
 
