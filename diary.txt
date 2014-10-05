@@ -1,0 +1,106 @@
+commit b6a96e680f5a90bafb7a7cdc268ab1edb5a92277
+Author: tnguyenbluesat <tnguyen@bluesat.unsw.edu.au>
+Date:   Thu Oct 2 00:34:41 2014 +1000
+
+    implemented formatted print statements along with about half of subset 4.
+    Still need to do dicts, sorted()
+
+commit f3113a780ad099cc495d172d35ccac71def4f1c7
+Author: tnguyenbluesat <tnguyen@bluesat.unsw.edu.au>
+Date:   Wed Oct 1 23:39:40 2014 +1000
+
+    implemented some stuf to do with subset 4. specifically iterating over
+    stdin and some array stuff. need to do other stuff. Stuff
+
+commit fb0b5e4b6deef1e380776d261862ba09cdd2c227
+Author: tnguyenbluesat <tnguyen@bluesat.unsw.edu.au>
+Date:   Wed Oct 1 21:25:00 2014 +1000
+
+    fixed bug with elif to elsif
+
+commit 387d540f67ea010f050604c2c1bad9cee8c05ce7
+Author: tnguyenbluesat <tnguyen@bluesat.unsw.edu.au>
+Date:   Wed Oct 1 21:19:33 2014 +1000
+
+    Got std readline working. finished Subset 3
+
+commit 9485f47177ae8bb5746deffdbc4b3b51f8cce514
+Author: tnguyenbluesat <tnguyen@bluesat.unsw.edu.au>
+Date:   Wed Oct 1 20:03:14 2014 +1000
+
+    implemented sys.write. Suspiciously easy. Need to check with future stuff
+
+commit ae090381f0891556d62f00b5c3d1d7168cbac577
+Author: tnguyenbluesat <tnguyen@bluesat.unsw.edu.au>
+Date:   Wed Oct 1 19:49:43 2014 +1000
+
+    Tidied up some issues with expression parsing
+
+commit cc5363a6bd5695ce283dfb8faef1ca4e696ee39c
+Author: tnguyenbluesat <tnguyen@bluesat.unsw.edu.au>
+Date:   Wed Oct 1 19:47:34 2014 +1000
+
+    implemented some array assignments, more later
+
+commit a91133c232b39bbe6c96bf90e76ef722ac5e64dd
+Author: tnguyenbluesat <tnguyen@bluesat.unsw.edu.au>
+Date:   Wed Oct 1 19:40:07 2014 +1000
+
+    implemented range() for 2 varriables
+
+commit a439b76278d18652d78647555fe6c88bb8d4eafd
+Author: tnguyenbluesat <tnguyen@bluesat.unsw.edu.au>
+Date:   Wed Oct 1 18:28:12 2014 +1000
+
+    Rejigged the tab-sensing system (and now it all works). Adjusted the main
+    parser to suit. detabify will now add tabs where needed and parse will
+    change expressions as necessary
+
+commit 32d0e80322baff68cb4f6d10e9e4e9d9e84a0321
+Author: tnguyenbluesat <tnguyen@bluesat.unsw.edu.au>
+Date:   Wed Oct 1 14:47:27 2014 +1000
+
+    moved tab generation into its own function
+
+commit 3d9837b336e996df6517f62b52d969a4435a5da1
+Author: tnguyenbluesat <tnguyen@bluesat.unsw.edu.au>
+Date:   Wed Oct 1 14:43:08 2014 +1000
+
+    implemented correct tabbing and got break and continue working
+
+commit 1ed4455d114f217aea7b2b4a2ca09031ded278ee
+Author: tnguyenbluesat <tnguyen@bluesat.unsw.edu.au>
+Date:   Wed Oct 1 14:15:22 2014 +1000
+
+    Fixed small bug due to looking for tabs instead of whitespaces in while
+    loop
+
+commit 048fb0c244d3eae1c2aa0a8ea43967b675c3fa19
+Author: tnguyenbluesat <tnguyen@bluesat.unsw.edu.au>
+Date:   Tue Sep 30 19:51:19 2014 +1000
+
+    Got multiline while and if statements working using recursion recursion recursio
+
+commit 110915975554bd5b4268e16769c7d5046b3330ff
+Author: tnguyenbluesat <tnguyen@bluesat.unsw.edu.au>
+Date:   Tue Sep 30 18:07:49 2014 +1000
+
+    implemented  most logical operators. preparing for multiline operators
+
+commit ff4211ef25de7b4310de239edd0fdfbe65df9d2d
+Author: tnguyenbluesat <tnguyen@bluesat.unsw.edu.au>
+Date:   Tue Sep 30 17:07:39 2014 +1000
+
+    did basic test if statements. does not extend to loops in loops or recursion yet
+
+commit dac54797798f152dceb2228566081e5456bf1675
+Author: tnguyenbluesat <tnguyen@bluesat.unsw.edu.au>
+Date:   Tue Sep 30 15:59:24 2014 +1000
+
+    Implemented subset 1 with basic variable names and removal of whitespa
+
+commit 29733aca6458be80ced71c424dbf3f14637c8b3b
+Author: Thien Nguyen <tngu211@cse.unsw.EDU.AU>
+Date:   Tue Sep 30 11:26:55 2014 +1000
+
+    starting point
