@@ -27,10 +27,6 @@ foreach my $input (@simplifiedPython)
 	push @parsedLines, $parsedLine;
 }
 
-foreach my $varname (keys %vartypes)
-{
-	print "#$varname: $vartypes{$varname} \n";
-}
 print @parsedLines;
 #@perlOutput = detabify (@parsedLines);
 
@@ -102,7 +98,8 @@ sub parseLine
 		
 		if ($2)
 		{
-			$expression = parseExpression($2).",";
+			$expression = parseExpression($2);
+			$expression = $expression.",";
 			$expression =~ s/;//g;
 		}
 
@@ -323,6 +320,22 @@ sub parseExpression
 
     }
 
+    #do a final check of varialbe type
+
+    if ($expr =~ /^\$([a-zA-Z]\w+)$/)
+	{
+		#check variable type 
+		$varname = $1;
+		if ($vartypes{$varname} eq "hash")
+		{
+			$expr =~ s/\$/\%/g;
+		}
+		elsif ($vartypes{$varname} eq "array")
+		{
+			$expr =~ s/\$/\@/g;
+		}
+
+	}
 
 	return $expr;
 }
@@ -362,14 +375,14 @@ sub parseVarnames
 		($expr =~ /([a-zA-Z]\w*)=sys.stdin.readlines/))
 	{
 		#deal with array assignments
-		print "#$1 array \n";
+		#print "#$1 array \n";
 		$vartypes{$1} = "array";
 		$expr =~ s/([a-zA-Z]\w*)/\@$1/g;
 	}
 	elsif ($expr =~ /([a-zA-Z]\w*)={(.*)}/)
 	{
 		#dictionary assignments
-		print "#$1 hash \n";
+		#print "#$1 hash \n";
 		$vartypes{$1} = "hash";
 		$expr = "\%$1=\($2\)";
 		$expr =~ s/\:/,/g;
