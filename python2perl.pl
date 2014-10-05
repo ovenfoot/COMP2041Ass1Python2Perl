@@ -2,55 +2,31 @@
 # Starting point for COMP2041/9041 assignment
 # http://www.cse.unsw.edu.au/~cs2041/assignments/python2perl
 # written by andrewt@cse.unsw.edu.au September 2014
+# edited by Thien Nguyen October 2014
 
 
 #TODO: Figureout 2's complement
 
 %vartypes = ();
 
-#$varnames = '.(?!print|for|while)*';
-
 $operators = '\-=\*\+\&\!\|></%^~';
-#$varnames = 'answer';
 $currIndent = 0;
 my @simplifiedPython = detabify(<>);
-#print @simplifiedPython;
-#print "Parsed the pythin: \n";
-#print @simplifiedPython;
 push @parsedLines, "#!/usr/bin/perl -w\n";
 foreach my $input (@simplifiedPython)
 {
 
-	#print "input: $input";
 	$parsedLine = parseLine($input);
-	#print "parsed: $parsedLine";
 	push @parsedLines, $parsedLine;
 }
 
 print @parsedLines;
-#@perlOutput = detabify (@parsedLines);
-
-#print @perlOutput;
-
-#@partParsedLines = tokenSplit(@partParsedLines);
-#print "\n------------\n\n";
-
-
-
-#dumbParseLine(@partParsedLines);
-#
 
 sub parseLine
 {
 	my ($line) = @_;
 
-	#remove leading white space
-	#$line =~s/^\s.//g;
-	#remove white space from variable names
-	#$line =~ s/\s*([$operators])\s*/$1/g;
 	chomp $line;
-	#$line =~ s/\n//g;
-	#@lines = split(';', $line);
 
 	if ($line =~ /^#!/)
 	{
@@ -140,37 +116,34 @@ sub parseLine
         {
             $line.="($condition)";
         }
-
-        
-
        	$line.= generateIndents($currIndent);
-        #$currIndent++;
-
-        #print "#conditon phrase is @condition_phrase\n";
         my $expressions = join(':', @condition_phrase[1..$#condition_phrase]);
         $expressions =~ s/^\s*//g;
+
+
         if ($expressions)
         {
-        	#print "#FOOOOO $expressions\n";
+        	#case for single line while or if statements
+        	#generate curly brace and newlines
+        	#remember to indent
         	$line.= generateIndents($currIndent);
         	$line.="\n".$whitespace."{\n";
         	$currIndent++;
        		$line.= $whitespace."\t";
+
+       		#split sub expressions and tread individually
 			my @subexpressions = split (';', $expressions);
-	        #print "#expressions are $expressions\n";
-	        #join the rest of the phrase
 
 			foreach  my $subexpr (@subexpressions)
 			{
 				chomp $subexpr;
 				$subexpr =~ s/^\s*//g;
-				#print "#subexpr is $subexpr";
 				$expression = parseLine($subexpr);
 
 	            #indenting
 	        	$line.= generateIndents($currIndent);
 				$line .= "$expression";
-				#print "$subexpr\n";
+
 			}
 		}
         $currIndent--;
@@ -213,10 +186,6 @@ sub parseLine
 	{
 		$line = '#'.$line;
 	}
-
-
-
-
 	$line = $line."\n";
 	return $line;
 }
@@ -245,10 +214,10 @@ sub parseExpression
 	$expr = parseVarnames($expr);	
 
 
-	#empty list;
+	#empty lists, convert bracetype
 	$expr =~ s/\[\]/\(\)/g;
 
-	#special keywords
+	#special keywords, convert to perl
 	$expr =~ s/[\$\@]print/print /g;
 	$expr =~ s/[\$\@]break/last;/g;
 
@@ -256,7 +225,7 @@ sub parseExpression
 	$expr =~ s/[\$\@]sys.[\$\@]stdin.[\$\@]readline(s)*\(\)/\<STDIN\>/g;
 	$expr =~ s/[\$\@](int)*\([\$\@]sys.[\$\@]stdin.[\$\@]readline(s)*\(\)\)/\<STDIN\>/g;
 
-	#handling range
+	#handling range, autoconvert to array
     if ($expr =~ /[\$\@]*range\(\s*(.*),\s*(.*)\)/)
     {
     	$start = $1;
@@ -271,7 +240,7 @@ sub parseExpression
 
     $expr =~ s/[\$\@]*sys\.[\$\@]*stdin/\(\<STDIN\>\)/g;
 
-    #handle len
+    #handle len, auto convert to array
     if( $expr =~ /(.*)[\$\@]len\(([\$\@]*\w+)\)(.*)/)
     {
     	$lhs = $1;
@@ -284,28 +253,7 @@ sub parseExpression
 
     }
 
-
-    #handling list functions
-    $expr =~ s/[\$\@]([a-zA-Z]\w*)=\[(.*)\]/\@$1=\($2\)/g;
-    $vartypes{$1} = "array";
-    $expr =~ s/[\$\@]([a-zA-Z]\w*).[\$\@]pop\(\)/pop\(\@$1\)/g;
-    $vartypes{$1} = "array";
-
-    #fix string literals
-    $expr = fixStringLiteral($expr);
-
-    #switch between arrays and hashes using a lookup table
-    if ($expr =~ /\$([a-zA-Z]\w*)\[(.*)\]/)
-    {
-    	my $name = $1;
-    	my $index = $2;
-    	if ($vartypes{$name} eq "hash")
-    	{
-    		$expr =~ s/\$([a-zA-Z]\w*)\[(.*)\]/\$$1\{$2\}/g
-    	}
-    }
-
-    #handle sorted
+    #handle sorted and autoconvert to array
     if ($expr =~ /(.*)=[\$\@]sorted\((.*)\)/)
     {
     	#if expression has sorted function, make sure arguments are converted
@@ -320,8 +268,27 @@ sub parseExpression
 
     }
 
-    #do a final check of varialbe type
+    #handling list functions, convert to array and store as array
+    $expr =~ s/[\$\@]([a-zA-Z]\w*)=\[(.*)\]/\@$1=\($2\)/g;
+    $vartypes{$1} = "array";
+    $expr =~ s/[\$\@]([a-zA-Z]\w*).[\$\@]pop\(\)/pop\(\@$1\)/g;
+    $vartypes{$1} = "array";
 
+    #fix string literals so that double quotes dont contain variables
+    $expr = fixStringLiteral($expr);
+
+    #switch between arrays and hashes using a lookup table
+    if ($expr =~ /\$([a-zA-Z]\w*)\[(.*)\]/)
+    {
+    	my $name = $1;
+    	my $index = $2;
+    	if ($vartypes{$name} eq "hash")
+    	{
+    		$expr =~ s/\$([a-zA-Z]\w*)\[(.*)\]/\$$1\{$2\}/g
+    	}
+    }
+
+    #do a final check of varialbe type. convert arrays or hashes if necessary
     if ($expr =~ /^\$([a-zA-Z]\w+)$/)
 	{
 		#check variable type 
@@ -340,6 +307,7 @@ sub parseExpression
 	return $expr;
 }
 
+#remove variable names from single and double quotes
 sub fixStringLiteral
 {
 	my ($input) = @_;
@@ -362,8 +330,6 @@ sub fixStringLiteral
     	
     }
 
-    #print "returning $input\n";
-
 	return $input;
 }
 
@@ -375,14 +341,12 @@ sub parseVarnames
 		($expr =~ /([a-zA-Z]\w*)=sys.stdin.readlines/))
 	{
 		#deal with array assignments
-		#print "#$1 array \n";
 		$vartypes{$1} = "array";
 		$expr =~ s/([a-zA-Z]\w*)/\@$1/g;
 	}
 	elsif ($expr =~ /([a-zA-Z]\w*)={(.*)}/)
 	{
 		#dictionary assignments
-		#print "#$1 hash \n";
 		$vartypes{$1} = "hash";
 		$expr = "\%$1=\($2\)";
 		$expr =~ s/\:/,/g;
@@ -390,8 +354,6 @@ sub parseVarnames
 	else
 	{
 		#non array assignments
-		#print "#$1 scalar \n";
-		#$vartypes{$1} = "scalar";
 		$expr =~ s/([a-zA-Z]\w*)/\$$1/g;
 	}
 
@@ -440,12 +402,13 @@ sub detabify
 	foreach my $line(@inputLines)
 	{
 		$tabstring = $line;
+		#group all continuous whitespaces into single array
 		@tabarray = $tabstring =~ m/^\s+/g;
+
+		#grab first whitespace and count number of whitespaces
 		$tabstring = $tabarray[0];
 		@tabarray = $tabstring =~ m/(\s)/g;
 		$tabspaces = $#tabarray+1;
-
-		#print "#$tabspaces $line";
 
 		$line =~ s/^(\s*)//g;
 		
@@ -460,7 +423,7 @@ sub detabify
 
 			if ($tabspaces > $indentStack[-1] )
 			{
-				#print "INCREASE\n";
+				#increase in indent stack, push }
 				$lineBuffer .=generateIndents($#indentStack)."{\n";
 				push @returnLines, $lineBuffer;
 				$lineBuffer = '';
@@ -468,6 +431,7 @@ sub detabify
 			}
 			elsif ($tabspaces < $indentStack[-1])
 			{
+				#decrease in indent stack, push }
 				#print "DEACREASE\n";
 				while ($tabspaces < $indentStack[-1])
 				{
@@ -480,7 +444,6 @@ sub detabify
 
 			}
 
-
 			$lineBuffer.=generateIndents($#indentStack).$line;
 
 			push @returnLines, $lineBuffer;
@@ -488,6 +451,8 @@ sub detabify
 		}
 
 	}
+
+	#place curly braces to de-indent everything
 	while ($indentStack[-1] > 0)
 	{
 		pop @indentStack;
