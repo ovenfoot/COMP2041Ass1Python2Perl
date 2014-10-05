@@ -6,8 +6,9 @@
 
 #TODO: Figureout 2's complement
 
+%vartypes = ();
 
-$varnames = '.(?!print|for|while)*';
+#$varnames = '.(?!print|for|while)*';
 
 $operators = '\-=\*\+\&\!\|></%^~';
 #$varnames = 'answer';
@@ -226,6 +227,9 @@ sub parseFunction
 	print "found function\n";
 
 }
+
+
+
 sub parseExpression
 {
 	my ($expr) = @_;
@@ -237,24 +241,17 @@ sub parseExpression
 	$expr =~ s/\s*and\s*/ && /g;
 	$expr =~ s/\s*not\s*/ ! /g;
 
-	
-	if (($expr =~ /([a-zA-Z]\w*)=range.*/) ||
-		($expr =~ /([a-zA-Z]\w*)=sys.stdin.readlines/))
-	{
-		#deal with array assignments
-		$expr =~ s/([a-zA-Z]\w*)/\@$1/g;
-	}
-	else
-	{
-		#non array assignments
-		$expr =~ s/([a-zA-Z]\w*)/\$$1/g;
-	}
+	$expr = parseVarnames($expr);	
+
 
 	#empty list;
 	$expr =~ s/\[\]/\(\)/g;
 
+	#special keywords
 	$expr =~ s/[\$\@]print/print /g;
 	$expr =~ s/[\$\@]break/last;/g;
+
+	#special functions
 	$expr =~ s/[\$\@]sys.[\$\@]stdin.[\$\@]readline(s)*\(\)/\<STDIN\>/g;
 	$expr =~ s/[\$\@](int)*\([\$\@]sys.[\$\@]stdin.[\$\@]readline(s)*\(\)\)/\<STDIN\>/g;
 
@@ -286,17 +283,50 @@ sub parseExpression
 
     }
 
+
+    #handling list functions
+    $expr =~ s/[\$\@]([a-zA-Z]\w*)=\[(.*)\]/\@$1=\($2\)/g;
+    $expr =~ s/[\$\@]([a-zA-Z]\w*).[\$\@]pop\(\)/pop\(\@$1\)/g;
+
     #fix string literals
-    if ($expr =~ /(.*)\"(.*)\"/)
+    if ($expr =~ /(.*)([\"\'])(.*)([\'\"])/)
     {
     	$lhs = $1;
-    	$stringLiteral = $2;
+    	$quotemark = $2;
+    	#print "Quote mark is $2 \n";
+    	$stringLiteral = $3;
     	$stringLiteral =~ s/\$//g;
-    	$expr = $lhs.'"'.$stringLiteral.'"';
+    	$expr = $lhs.$2.$stringLiteral.$2;
     	#print "$stringLiteral\n";
     }
 
 	return $expr;
+}
+
+
+sub parseVarnames
+{
+	my ($expr) = @_;
+	if (($expr =~ /([a-zA-Z]\w*)=range.*/) ||
+		($expr =~ /([a-zA-Z]\w*)=sys.stdin.readlines/))
+	{
+		#deal with array assignments
+		#$vartypes{$1} = "array";
+		$expr =~ s/([a-zA-Z]\w*)/\@$1/g;
+	}
+	else
+	{
+		#non array assignments
+		#$vartypes{$1} = "scalar";
+		$expr =~ s/([a-zA-Z]\w*)/\$$1/g;
+	}
+
+
+	
+
+
+	return $expr
+
 }
 
 #helper function for range(). intelligently minuses 1 from the end of a range
