@@ -290,7 +290,9 @@ sub parseExpression
 
     #handling list functions
     $expr =~ s/[\$\@]([a-zA-Z]\w*)=\[(.*)\]/\@$1=\($2\)/g;
+    $vartypes{$1} = "array";
     $expr =~ s/[\$\@]([a-zA-Z]\w*).[\$\@]pop\(\)/pop\(\@$1\)/g;
+    $vartypes{$1} = "array";
 
     #fix string literals
     $expr = fixStringLiteral($expr);
@@ -304,7 +306,23 @@ sub parseExpression
     	{
     		$expr =~ s/\$([a-zA-Z]\w*)\[(.*)\]/\$$1\{$2\}/g
     	}
-    }	
+    }
+
+    #handle sorted
+    if ($expr =~ /(.*)=[\$\@]sorted\((.*)\)/)
+    {
+    	#if expression has sorted function, make sure arguments are converted
+    	#to perl style arrays. flip $ and @ and [] with ()
+    	my $lhs = $1;
+    	my $arg = $2;
+    	$lhs =~ s/\$/\@/g;
+    	$arg =~ s/\$/\@/g;
+    	$arg =~ s/\[/\(/g;
+    	$arg =~ s/\]/\)/g;
+    	$expr = "$lhs=sort{\$a<=>\$b}($arg)"
+
+    }
+
 
 	return $expr;
 }
