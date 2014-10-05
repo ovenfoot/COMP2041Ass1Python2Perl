@@ -27,7 +27,10 @@ foreach my $input (@simplifiedPython)
 	push @parsedLines, $parsedLine;
 }
 
-
+foreach my $varname (keys %vartypes)
+{
+	print "#$varname: $vartypes{$varname} \n";
+}
 print @parsedLines;
 #@perlOutput = detabify (@parsedLines);
 
@@ -64,7 +67,7 @@ sub parseLine
 		# Blank & comment lines can be passed unchanged
 		$line = $line;
 	}
-	elsif ($line =~ /^(\s*)(\w)+\s*[$operators].*/)
+	elsif ($line =~ /^(\s*)([\w\[\]\']+)\s*[$operators].*/)
 	{
 		#mathematical expression. 
 		$line = $1.parseExpression($line).";\n";
@@ -78,7 +81,7 @@ sub parseLine
 
 		#for python concatenate string printing, replace ", " with a space
 		$string =~ s/\s*\"\s*\,\s*\"\s*/ /g;
-		print "#string is $string\n";
+		#print "#string is $string\n";
 		$line = "$whitespace print \"$string\\n\";";
 
 
@@ -100,6 +103,7 @@ sub parseLine
 		if ($2)
 		{
 			$expression = parseExpression($2).",";
+			$expression =~ s/;//g;
 		}
 
 		#decide whether or not to auto include newline
@@ -289,18 +293,47 @@ sub parseExpression
     $expr =~ s/[\$\@]([a-zA-Z]\w*).[\$\@]pop\(\)/pop\(\@$1\)/g;
 
     #fix string literals
-    if ($expr =~ /(.*)([\"\'])(.*)([\'\"])/)
+    $expr = fixStringLiteral($expr);
+
+    #switch between arrays and hashes using a lookup table
+    if ($expr =~ /\$([a-zA-Z]\w*)\[(.*)\]/)
     {
-    	$lhs = $1;
-    	$quotemark = $2;
-    	#print "Quote mark is $2 \n";
-    	$stringLiteral = $3;
-    	$stringLiteral =~ s/\$//g;
-    	$expr = $lhs.$2.$stringLiteral.$2;
-    	#print "$stringLiteral\n";
-    }
+    	my $name = $1;
+    	my $index = $2;
+    	if ($vartypes{$name} eq "hash")
+    	{
+    		$expr =~ s/\$([a-zA-Z]\w*)\[(.*)\]/\$$1\{$2\}/g
+    	}
+    }	
 
 	return $expr;
+}
+
+sub fixStringLiteral
+{
+	my ($input) = @_;
+	if ($input =~ /(.*)([\"\'])(.*)([\'\"])(.*)/)
+    {
+    	my $lhs = $1;
+    	my $quotemark = $2;
+    	
+    	my $stringLiteral = $3;
+    	my $rhs = $5;
+
+    	#recurse backwards on the line if you need to replace multiples
+    	if ($lhs=~ /(.*)([\"\'])(.*)([\'\"])(.*)/)
+    	{
+    		#print "lhs is $lhs\n";
+    		$lhs = fixStringLiteral($lhs);
+    	}
+    	$stringLiteral =~ s/\$//g;
+    	$input = $lhs.$quotemark.$stringLiteral.$quotemark.$rhs;
+    	
+    }
+
+    #print "returning $input\n";
+
+	return $input;
 }
 
 
@@ -311,12 +344,22 @@ sub parseVarnames
 		($expr =~ /([a-zA-Z]\w*)=sys.stdin.readlines/))
 	{
 		#deal with array assignments
-		#$vartypes{$1} = "array";
+		print "#$1 array \n";
+		$vartypes{$1} = "array";
 		$expr =~ s/([a-zA-Z]\w*)/\@$1/g;
+	}
+	elsif ($expr =~ /([a-zA-Z]\w*)={(.*)}/)
+	{
+		#dictionary assignments
+		print "#$1 hash \n";
+		$vartypes{$1} = "hash";
+		$expr = "\%$1=\($2\)";
+		$expr =~ s/\:/,/g;
 	}
 	else
 	{
 		#non array assignments
+		#print "#$1 scalar \n";
 		#$vartypes{$1} = "scalar";
 		$expr =~ s/([a-zA-Z]\w*)/\$$1/g;
 	}
